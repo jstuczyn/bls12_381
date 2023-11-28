@@ -783,6 +783,28 @@ where
     }
 }
 
+#[cfg(feature = "serde")]
+impl serde_crate::Serialize for Scalar {
+    fn serialize<S: serde_crate::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        crate::util::serialize_bytes(self.to_repr(), s)
+    }
+}
+
+#[cfg(all(feature = "serde", feature = "alloc"))]
+impl<'de> serde_crate::Deserialize<'de> for Scalar {
+    fn deserialize<D: serde_crate::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        use serde_crate::de::Error;
+
+        let bytes = crate::util::deserialize_bytes(d)?;
+        match Scalar::from_repr(bytes).into() {
+            Some(s) => Ok(s),
+            None => Err(D::Error::custom(
+                "deserialized bytes don't encode a 32-byte canonical bls12_381 scalar",
+            )),
+        }
+    }
+}
+
 #[test]
 fn test_constants() {
     assert_eq!(

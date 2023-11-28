@@ -19,6 +19,45 @@ pub const fn mac(a: u64, b: u64, c: u64, carry: u64) -> (u64, u64) {
     (ret as u64, (ret >> 64) as u64)
 }
 
+/// Serializes bytes to human readable or compact representation.
+///
+/// Depending on whether the serializer is a human readable one or not, the bytes are either
+/// encoded as a hex string or a list of bytes.
+#[cfg(feature = "serde")]
+pub(crate) fn serialize_bytes<S: serde_crate::Serializer, const N: usize>(
+    bytes: [u8; N],
+    s: S,
+) -> Result<S::Ok, S::Error> {
+    if s.is_human_readable() {
+        hex::serde::serialize(bytes, s)
+    } else {
+        s.serialize_bytes(&bytes)
+    }
+}
+
+/// Deserialize bytes from human readable or compact representation.
+///
+/// Depending on whether the deserializer is a human readable one or not, the bytes are either
+/// decoded from a hex string or a list of bytes.
+#[cfg(all(feature = "serde", feature = "alloc"))]
+pub(crate) fn deserialize_bytes<'de, D: serde_crate::Deserializer<'de>, const N: usize>(
+    d: D,
+) -> Result<[u8; N], D::Error> {
+    use alloc::{format, vec::Vec};
+    use serde_crate::Deserialize;
+
+    let vec: Vec<u8> = if d.is_human_readable() {
+        hex::serde::deserialize(d)
+    } else {
+        <_>::deserialize(d)
+    }?;
+
+    <[u8; N]>::try_from(vec).map_err(|_| {
+        serde_crate::de::Error::custom(format!(
+            "could not convert deserialized bytes into the array of size {N}",
+        ))
+    })
+}
 macro_rules! impl_add_binop_specify_output {
     ($lhs:ident, $rhs:ident, $output:ident) => {
         impl<'b> Add<&'b $rhs> for $lhs {

@@ -1091,6 +1091,48 @@ impl UncompressedEncoding for G1Affine {
     }
 }
 
+#[cfg(feature = "serde")]
+impl serde_crate::Serialize for G1Affine {
+    fn serialize<S: serde_crate::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        crate::util::serialize_bytes(self.to_compressed(), s)
+    }
+}
+
+#[cfg(all(feature = "serde", feature = "alloc"))]
+impl<'de> serde_crate::Deserialize<'de> for G1Affine {
+    fn deserialize<D: serde_crate::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        use serde_crate::de::Error;
+
+        let bytes = crate::util::deserialize_bytes(d)?;
+        match G1Affine::from_compressed(&bytes).into() {
+            Some(s) => Ok(s),
+            None => Err(D::Error::custom(
+                "deserialized bytes don't encode a 48-byte compressed canonical bls12_381 G1 point",
+            )),
+        }
+    }
+}
+
+#[cfg(feature = "serde")]
+impl serde_crate::Serialize for G1Projective {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde_crate::Serializer,
+    {
+        G1Affine::from(*self).serialize(serializer)
+    }
+}
+
+#[cfg(all(feature = "serde", feature = "alloc"))]
+impl<'de> serde_crate::Deserialize<'de> for G1Projective {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde_crate::Deserializer<'de>,
+    {
+        G1Affine::deserialize(deserializer).map(G1Projective::from)
+    }
+}
+
 #[test]
 fn test_beta() {
     assert_eq!(

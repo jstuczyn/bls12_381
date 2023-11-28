@@ -33,6 +33,11 @@ name = "hash_to_curve"
 harness = false
 required-features = ["experimental"]
 
+[dependencies]
+# serde dependencies
+serde_crate = { version = "1.0.152", optional = true, default-features = false, features = ["alloc"], package = "serde" }
+hex = { version = "0.4.3", optional = true, default-features = false, features = ["alloc", "serde"] }
+
 [dependencies.digest]
 version = "0.9"
 optional = true
@@ -71,3 +76,4 @@ pairings = ["groups", "pairing"]
 alloc = ["group/alloc"]
 experimental = ["digest"]
 nightly = ["subtle/nightly"]
+serde = ["hex", "serde_crate"]
